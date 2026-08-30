@@ -45,19 +45,6 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/api/debug-env")
-def debug_env():
-    key = os.environ.get("GEMINI_API_KEY", "")
-    return {
-        "MONDAY_API_TOKEN_set": bool(os.environ.get("MONDAY_API_TOKEN")),
-        "GEMINI_API_KEY_length": len(key),
-        "GEMINI_API_KEY_has_leading_or_trailing_space": key != key.strip(),
-        "GEMINI_API_KEY_first_3_chars": key[:3],
-        "GEMINI_API_KEY_last_3_chars": key[-3:],
-        "GEMINI_MODEL": os.environ.get("GEMINI_MODEL", "NOT SET"),
-        "DEALS_BOARD_ID_set": bool(os.environ.get("DEALS_BOARD_ID")),
-        "WORK_ORDERS_BOARD_ID_set": bool(os.environ.get("WORK_ORDERS_BOARD_ID")),
-    }
 
 
 app.mount("/", StaticFiles(directory="/app/frontend", html=True), name="frontend")
