@@ -74,17 +74,38 @@ def _match(row_val: Optional[str], filter_val: Optional[str]) -> bool:
 # Tool implementations (schemas for these live in llm.py / agent.py)
 # ---------------------------------------------------------------------------
 
+def _in_range(d, start, end) -> bool:
+    if d is None:
+        return False
+    if start and d < start:
+        return False
+    if end and d > end:
+        return False
+    return True
+
+
+def _parse_iso_date(s: Optional[str]):
+    if not s:
+        return None
+    from datetime import datetime
+    return datetime.strptime(s, "%Y-%m-%d")
+
+
 def query_deals(sector: Optional[str] = None, status: Optional[str] = None,
                  stage: Optional[str] = None, min_stage_rank: Optional[int] = None,
+                 created_after: Optional[str] = None, created_before: Optional[str] = None,
                  limit: int = 50) -> dict:
     ds = get_deals_dataset()
     rows = ds["rows"]
+    start = _parse_iso_date(created_after)
+    end = _parse_iso_date(created_before)
     filtered = [
         r for r in rows
         if _match(r["sector"], sector)
         and _match(r["status"], status)
         and _match(r["stage"], stage)
         and (min_stage_rank is None or (r["stage_rank"] or 0) >= min_stage_rank)
+        and (start is None and end is None or _in_range(r["created_date"], start, end))
     ]
     return {
         "matched_count": len(filtered),
@@ -94,13 +115,17 @@ def query_deals(sector: Optional[str] = None, status: Optional[str] = None,
 
 
 def query_work_orders(sector: Optional[str] = None, execution_status: Optional[str] = None,
+                       invoiced_after: Optional[str] = None, invoiced_before: Optional[str] = None,
                        limit: int = 50) -> dict:
     ds = get_work_orders_dataset()
     rows = ds["rows"]
+    start = _parse_iso_date(invoiced_after)
+    end = _parse_iso_date(invoiced_before)
     filtered = [
         r for r in rows
         if _match(r["sector"], sector)
         and _match(r["execution_status"], execution_status)
+        and (start is None and end is None or _in_range(r["last_invoice_date"], start, end))
     ]
     return {
         "matched_count": len(filtered),

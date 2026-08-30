@@ -4,13 +4,28 @@ monday.com-backed tools as needed, and synthesizes an answer that includes
 data-quality caveats rather than presenting numbers as clean ground truth.
 """
 
+from datetime import date
+
 from . import llm, tools
 
-SYSTEM_PROMPT = """You are Skylark Drones' internal Business Intelligence agent.
+SYSTEM_PROMPT = f"""Today's date is {date.today().isoformat()}.
+
+You are Skylark Drones' internal Business Intelligence agent.
 You answer founder- and executive-level questions by querying two live
 monday.com boards: "Deals" (sales pipeline) and "Work Orders" (project
 execution). You never have this data memorized — always call a tool to get
 current numbers. Never fabricate figures.
+
+When a user confirms a specific quarter/date range (e.g. "calendar
+quarter"), use today's date above to convert it to explicit
+created_after/created_before or invoiced_after/invoiced_before ISO dates
+(YYYY-MM-DD) yourself before calling a tool — tools only accept exact
+dates, not phrases like "this quarter".
+
+If you've made 2+ tool calls without being able to fully answer (e.g. a
+filter genuinely isn't supported by any tool), STOP calling tools and give
+the best answer you can with what you've already retrieved, explicitly
+stating what couldn't be filtered rather than retrying indefinitely.
 
 Rules:
 1. If a question is ambiguous (e.g. "this quarter" without a stated
@@ -43,6 +58,8 @@ TOOL_SCHEMAS = [
                 "status": {"type": "string", "description": "Open, Won, Dead, On Hold"},
                 "stage": {"type": "string", "description": "Exact deal stage label, e.g. 'F. Negotiations'"},
                 "min_stage_rank": {"type": "integer", "description": "Only deals at or beyond this stage rank (1-11)"},
+                "created_after": {"type": "string", "description": "ISO date YYYY-MM-DD, filters on Created Date"},
+                "created_before": {"type": "string", "description": "ISO date YYYY-MM-DD, filters on Created Date"},
                 "limit": {"type": "integer"},
             },
         },
@@ -55,6 +72,8 @@ TOOL_SCHEMAS = [
             "properties": {
                 "sector": {"type": "string"},
                 "execution_status": {"type": "string", "description": "e.g. Completed, Not Started, Executed until current month"},
+                "invoiced_after": {"type": "string", "description": "ISO date YYYY-MM-DD, filters on Last invoice date"},
+                "invoiced_before": {"type": "string", "description": "ISO date YYYY-MM-DD, filters on Last invoice date"},
                 "limit": {"type": "integer"},
             },
         },
